@@ -10,8 +10,12 @@ from database.base import Base
 class Score(Base):
     __tablename__ = "scores"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    assessment_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    assessment_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("assessments.id"), nullable=False
+    )
     overall: Mapped[int] = mapped_column(Integer, nullable=False)
     email_score: Mapped[int] = mapped_column(Integer, nullable=False)
     attack_surface_score: Mapped[int] = mapped_column(Integer, nullable=False)
