@@ -250,9 +250,13 @@ class AssessmentService:
         if not assessment:
             return None
 
-        # load findings
+        company_stmt = select(Company).where(Company.id == assessment.company_id)
+        company_res = await self.db.execute(company_stmt)
+        company = company_res.scalars().first()
+
         fstmt = select(Finding).where(Finding.assessment_id == assessment.id)
         fres = await self.db.execute(fstmt)
+        raw_findings = fres.scalars().all()
         findings = [
             {
                 "id": str(f.id),
@@ -265,17 +269,26 @@ class AssessmentService:
                 "category": f.category,
                 "recommendation": f.recommendation,
             }
-            for f in fres.scalars().all()
+            for f in raw_findings
         ]
 
-        # load score
-        sstmt = select(Score).where(Score.assessment_id == assessment.id)
-        sres = await self.db.execute(sstmt)
+        score_stmt = select(Score).where(Score.assessment_id == assessment.id)
+        sres = await self.db.execute(score_stmt)
         score = sres.scalars().first()
+
+        top_findings = [
+            {
+                "title": f["title"],
+                "severity": f["severity"],
+                "category": f["category"],
+                "recommendation": f["recommendation"],
+            }
+            for f in _prepare_executive_findings(findings, limit=5)
+        ]
 
         return {
             "id": str(assessment.id),
-            "company_id": str(assessment.company_id),
+            "domain": company.domain if company else "",
             "status": assessment.status,
             "score": score.overall if score else None,
             "executive_summary": assessment.executive_summary,
@@ -286,7 +299,6 @@ class AssessmentService:
                 "technology": score.technology_score if score else None,
                 "reputation": score.reputation_score if score else None,
             },
-            "findings": findings,
-            "started_at": assessment.started_at,
-            "finished_at": assessment.finished_at,
+            "top_findings": top_findings,
+            "created_at": assessment.created_at,
         }
