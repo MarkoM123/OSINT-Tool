@@ -1,8 +1,7 @@
-from typing import List, Dict
 import asyncio
 
 
-async def check_credentials(domain: str) -> List[Dict]:
+async def check_credentials(domain: str) -> list[dict]:
     # Mock credential exposure checks (e.g., paste sites, public repos)
     await asyncio.sleep(0)
     return [

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+
 import httpx
 
 logger = logging.getLogger("eip.collectors.whois")
@@ -18,7 +19,12 @@ async def lookup(domain: str) -> dict[str, str]:
                 response = await client.get(url)
                 response.raise_for_status()
                 payload = response.json()
-                registrar = payload.get("registrar", {}).get("name", "") if isinstance(payload.get("registrar"), dict) else payload.get("registrar", "")
+                registrar_field = payload.get("registrar")
+                registrar = (
+                    registrar_field.get("name", "")
+                    if isinstance(registrar_field, dict)
+                    else registrar_field or ""
+                )
                 created = payload.get("events", [])
                 created_date = ""
                 if isinstance(created, list):
@@ -28,9 +34,17 @@ async def lookup(domain: str) -> dict[str, str]:
                             break
                 return {"registrar": registrar, "created": created_date}
             except httpx.HTTPError as exc:
-                logger.warning("WHOIS lookup failed for %s attempt %d: %s", normalized, attempt, exc)
+                logger.warning(
+                    "WHOIS lookup failed for %s attempt %d: %s",
+                    normalized,
+                    attempt,
+                    exc,
+                )
                 if attempt == 3:
-                    logger.error("WHOIS lookup failed after retries for %s", normalized)
+                    logger.error(
+                        "WHOIS lookup failed after retries for %s",
+                        normalized,
+                    )
                     return {"registrar": "", "created": ""}
                 await asyncio.sleep(1 << attempt)
     return {"registrar": "", "created": ""}

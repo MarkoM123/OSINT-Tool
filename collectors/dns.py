@@ -39,7 +39,13 @@ async def _resolve_name(name: str, rdtype: str) -> list[str]:
             answer = await resolver.resolve(name, rdtype)
             return [str(rdata).strip() for rdata in answer]
         except dns.exception.DNSException as exc:
-            logger.warning("DNS %s lookup failed for %s on attempt %d: %s", rdtype, name, attempt, exc)
+            logger.warning(
+                "DNS %s lookup failed for %s on attempt %d: %s",
+                rdtype,
+                name,
+                attempt,
+                exc,
+            )
             if attempt == 3:
                 return []
             await asyncio.sleep(1 << attempt)

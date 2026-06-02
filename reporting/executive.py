@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 import openai
 
@@ -32,7 +32,7 @@ def _safe_text(value: Any) -> str:
     return str(value)
 
 
-def _build_findings_summary(findings: List[Dict[str, Any]], limit: int = 5) -> str:
+def _build_findings_summary(findings: list[dict[str, Any]], limit: int = 5) -> str:
     ranked = sorted(
         findings,
         key=lambda item: (
@@ -41,20 +41,22 @@ def _build_findings_summary(findings: List[Dict[str, Any]], limit: int = 5) -> s
         ),
         reverse=True,
     )
-    lines: List[str] = []
+    lines: list[str] = []
     for index, finding in enumerate(ranked[:limit], start=1):
         title = _safe_text(finding.get("title")) or "Untitled finding"
         category = _safe_text(finding.get("category")) or "uncategorized"
         severity = _safe_text(finding.get("severity")) or "medium"
         confidence = float(finding.get("confidence", 0.0) or 0.0)
         recommendation = _safe_text(finding.get("recommendation")) or "No recommendation provided."
-        lines.append(
-            f"{index}. {title} | category: {category} | severity: {severity} | confidence: {confidence:.2f} | recommendation: {recommendation}"
+        finding_line = (
+            f"{index}. {title} | category: {category} | severity: {severity} | "
+            f"confidence: {confidence:.2f} | recommendation: {recommendation}"
         )
+        lines.append(finding_line)
     return "\n".join(lines) if lines else "No findings were provided."
 
 
-def _build_category_summary(category_scores: Dict[str, int]) -> str:
+def _build_category_summary(category_scores: dict[str, int]) -> str:
     entries = [f"{name}: {score}" for name, score in category_scores.items()]
     return "; ".join(entries)
 
@@ -70,8 +72,8 @@ def _build_tone_instruction(tone: str) -> str:
 def _build_prompt(
     domain: str,
     score: int,
-    category_scores: Dict[str, int],
-    findings: List[Dict[str, Any]],
+    category_scores: dict[str, int],
+    findings: list[dict[str, Any]],
     tone: str,
 ) -> str:
     category_list = ", ".join([_normalize_category_name(name) for name in category_scores.keys()])
@@ -83,34 +85,45 @@ def _build_prompt(
         "top_findings": _build_findings_summary(findings, limit=5),
     }
 
-    return (
-        f"You are an experienced cybersecurity consultant preparing an executive report for C-suite stakeholders. "
-        f"Use only the information provided below and keep the response concise, business focused, and free of technical jargon unless essential. "
-        f"Return plain text only. Do not include markdown fences or code blocks. "
-        f"Use headings for each section.\n\n"
-        f"DATA:\n"
-        f"Domain: {report_data['domain']}\n"
-        f"Overall exposure score: {report_data['overall_score']}\n"
-        f"Category scores: {json.dumps(report_data['category_scores'])}\n"
-        f"Exposure categories: {report_data['exposure_categories']}\n"
-        f"Top findings (sorted by severity and confidence):\n{report_data['top_findings']}\n\n"
-        f"INSTRUCTIONS:\n"
-        f"1. Executive Summary (max 200 words) - plain language, business risk focus.\n"
-        f"2. Overall Risk Rating - Critical / High / Medium / Low with a short explanation.\n"
-        f"3. Top 3 Risks - title, business impact, why it matters.\n"
-        f"4. Top 3 Recommendations - prioritized, clear actions, executive-level language.\n"
-        f"5. Exposure Breakdown - brief explanation of weakest categories.\n"
-        f"6. Business Impact Statement - revenue risk, operational disruption, brand/reputation impact.\n"
-        f"7. 30-Day Action Plan - concrete, realistic actions.\n"
-        f"Tone guidance: {_build_tone_instruction(tone)}"
-    )
+    prompt_parts = [
+        "You are an experienced cybersecurity consultant preparing an "
+        "executive report for C-suite stakeholders.",
+        "Use only the information provided below and keep the response "
+        "concise, business focused, and free of technical jargon unless "
+        "essential.",
+        "Return plain text only. Do not include markdown fences or code blocks.",
+        "Use headings for each section.",
+        "",
+        "DATA:",
+        f"Domain: {report_data['domain']}",
+        f"Overall exposure score: {report_data['overall_score']}",
+        f"Category scores: {json.dumps(report_data['category_scores'])}",
+        f"Exposure categories: {report_data['exposure_categories']}",
+        "Top findings (sorted by severity and confidence):",
+        report_data["top_findings"],
+        "",
+        "INSTRUCTIONS:",
+        "1. Executive Summary (max 200 words) - plain language, business risk focus.",
+        "2. Overall Risk Rating - Critical / High / Medium / Low with a short explanation.",
+        "3. Top 3 Risks - title, business impact, why it matters.",
+        "4. Top 3 Recommendations - prioritized, clear actions, executive-level language.",
+        "5. Exposure Breakdown - brief explanation of weakest categories.",
+        (
+            "6. Business Impact Statement - revenue risk, operational disruption, "
+            "brand/reputation impact."
+        ),
+        "7. 30-Day Action Plan - concrete, realistic actions.",
+        f"Tone guidance: {_build_tone_instruction(tone)}",
+    ]
+
+    return "\n".join(prompt_parts)
 
 
 def generate_executive_report(
     domain: str,
     score: int,
-    category_scores: Dict[str, int],
-    findings: List[Dict[str, Any]],
+    category_scores: dict[str, int],
+    findings: list[dict[str, Any]],
     tone: str = "executive",
 ) -> str:
     """Generate an executive report from exposure assessment data."""
@@ -129,7 +142,13 @@ def generate_executive_report(
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "You are a skilled cybersecurity consultant writing executive-level reports."},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a skilled cybersecurity consultant writing "
+                        "executive-level reports."
+                    ),
+                },
                 {"role": "user", "content": prompt},
             ],
             temperature=0.0,

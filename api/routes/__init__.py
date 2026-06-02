@@ -1,3 +1,3 @@
-from . import company, assessment
+from . import assessment, company
 
 __all__ = ["company", "assessment"]

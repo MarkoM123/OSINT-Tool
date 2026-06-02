@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import httpx
 import logging
-from typing import Any
+
+import httpx
 
 logger = logging.getLogger("eip.collectors.ct_logs")
 

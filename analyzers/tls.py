@@ -1,9 +1,8 @@
-from typing import List, Dict
 import asyncio
 
 
-async def analyze_hosts(hosts: List[str]) -> List[Dict]:
-	findings: List[Dict] = []
+async def analyze_hosts(hosts: list[str]) -> list[dict]:
+	findings: list[dict] = []
 	for h in hosts:
 		# Mock TLS checks: in production use ssl.get_server_certificate or sslyze
 		await asyncio.sleep(0)

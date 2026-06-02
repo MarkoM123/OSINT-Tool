@@ -1,25 +1,34 @@
-from typing import Any, List
-import uuid
 import asyncio
 import logging
+import uuid
 from datetime import datetime
+from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from analyzers import (
+    credentials as cred_analyzer,
+)
+from analyzers import (
+    email as email_analyzer,
+)
+from analyzers import (
+    technologies as tech_analyzer,
+)
+from analyzers import (
+    tls as tls_analyzer,
+)
+from collectors import ct_logs, dns, ipinfo, whois
+from core.config import get_settings
 from database.models.assessment import Assessment
 from database.models.company import Company
 from database.models.finding import Finding
-from database.models.asset import Asset
 from database.models.score import Score
-
-from collectors import ct_logs, dns, ipinfo, whois
-from analyzers import email as email_analyzer, tls as tls_analyzer, technologies as tech_analyzer, credentials as cred_analyzer
 from findings.engine import normalize_findings
-from scoring.engine import compute_score
 from reporting import generate_executive_report
 from reporting.pdf import render_report
-from core.config import get_settings
+from scoring.engine import compute_score
 
 logger = logging.getLogger("eip.assessment")
 
@@ -44,7 +53,10 @@ def _sort_key_for_finding(finding: dict[str, Any]) -> tuple[int, float]:
     return priority, confidence
 
 
-def _prepare_executive_findings(findings: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
+def _prepare_executive_findings(
+    findings: list[dict[str, Any]],
+    limit: int = 8,
+) -> list[dict[str, Any]]:
     sorted_findings = sorted(findings, key=_sort_key_for_finding, reverse=True)
     compact: list[dict[str, Any]] = []
     for finding in sorted_findings[:limit]:
@@ -88,7 +100,11 @@ class AssessmentService:
                 logger.info("Created company id=%s", company.id)
 
             # create assessment record
-            assessment = Assessment(company_id=company.id, status="running", started_at=datetime.utcnow())
+            assessment = Assessment(
+                company_id=company.id,
+                status="running",
+                started_at=datetime.utcnow(),  # noqa: E501
+            )
             self.db.add(assessment)
             await self.db.commit()
             await self.db.refresh(assessment)
@@ -99,12 +115,19 @@ class AssessmentService:
             domain = domain.strip().lower()
             ct_data = await ct_logs.query_ct(domain)
             subdomains = ct_data.get("subdomains", [])
-            certificate_names = ct_data.get("certificate_names", [])
-            logger.info("Found %d subdomains from crt.sh for %s", len(subdomains), domain)
+            logger.info(
+                "Found %d subdomains from crt.sh for %s",
+                len(subdomains),
+                domain,
+            )
 
             dns_data = await dns.collect_dns_records(subdomains)
             ips = dns_data.get("ips", [])
-            logger.info("Resolved %d unique ips for %d hosts", len(ips), len(subdomains))
+            logger.info(
+                "Resolved %d unique ips for %d hosts",
+                len(ips),
+                len(subdomains),
+            )
 
             ip_metadata = await ipinfo.enrich_ips(ips)
             logger.info("Enriched %d IPs with IP intelligence", len(ip_metadata))
@@ -115,10 +138,18 @@ class AssessmentService:
             assets = [{"hostname": sd, "type": "hostname"} for sd in subdomains]
 
             # Run analyzers
-            findings: List[dict] = []
+            findings: list[dict] = []
             findings.extend(await email_analyzer.analyze_domain(domain))
-            findings.extend(await tls_analyzer.analyze_hosts([a["hostname"] for a in assets]))
-            findings.extend(await tech_analyzer.fingerprint_hosts([a["hostname"] for a in assets]))
+            findings.extend(
+                await tls_analyzer.analyze_hosts(
+                    [a["hostname"] for a in assets],
+                )
+            )
+            findings.extend(
+                await tech_analyzer.fingerprint_hosts(
+                    [a["hostname"] for a in assets],
+                )
+            )
             findings.extend(await cred_analyzer.check_credentials(domain))
 
             logger.info("Collected %d raw findings", len(findings))
@@ -189,7 +220,12 @@ class AssessmentService:
                     }
                     for f in normalized
                 ],
-                key=lambda x: {"critical": 3, "high": 2, "medium": 1, "low": 0}.get(x.get("severity", "medium"), 0),
+                key=lambda x: {
+                    "critical": 3,
+                    "high": 2,
+                    "medium": 1,
+                    "low": 0,
+                }.get(x.get("severity", "medium"), 0),
                 reverse=True,
             )[:5]
 
@@ -197,7 +233,7 @@ class AssessmentService:
                 "domain": domain,
                 "company": company.name,
                 "assessment_id": str(assessment_id),
-                "executive_summary": "Executive summary placeholder",
+                "executive_summary": assessment.executive_summary,
                 "overall_score": score.overall,
                 "top_findings": top_findings,
                 "category_breakdown": {
@@ -227,7 +263,7 @@ class AssessmentService:
             logger.info("Completed assessment id=%s", assessment_id)
             return assessment_id
 
-        except Exception as exc:  # pragma: no cover - ensure failures are captured
+        except Exception:  # pragma: no cover - ensure failures are captured
             logger.exception("Assessment failed for domain=%s", domain)
             try:
                 if assessment_id:

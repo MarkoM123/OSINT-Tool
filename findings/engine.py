@@ -1,10 +1,10 @@
-from typing import List, Dict
 import uuid
+
 from database.models.finding import Finding
 
 
-def normalize_findings(raw_findings: List[Dict], assessment_id: uuid.UUID) -> List[Finding]:
-	objects: List[Finding] = []
+def normalize_findings(raw_findings: list[dict], assessment_id: uuid.UUID) -> list[Finding]:
+	objects: list[Finding] = []
 	for r in raw_findings:
 		f = Finding(
 			assessment_id=assessment_id,

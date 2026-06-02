@@ -1,10 +1,10 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from core.config import get_settings
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import company, assessment
+from api.routes import assessment, company
+from core.config import get_settings
 
 
 def create_app() -> FastAPI:

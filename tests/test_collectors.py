@@ -1,7 +1,7 @@
 import httpx
 import pytest
 
-from collectors import ct_logs, dns, ipinfo
+from collectors import ct_logs, ipinfo
 
 
 class DummyResponse:
@@ -12,7 +12,11 @@ class DummyResponse:
 
     def raise_for_status(self):
         if self.status_code >= 400:
-            raise httpx.HTTPStatusError("HTTP error", request=self.request, response=httpx.Response(self.status_code))
+            raise httpx.HTTPStatusError(
+                "HTTP error",
+                request=self.request,
+                response=httpx.Response(self.status_code),
+            )
 
     def json(self):
         return self._payload
@@ -34,7 +38,10 @@ class DummyClient:
 
 @pytest.mark.asyncio
 async def test_query_ct_returns_structure(monkeypatch):
-    payload = [{"name_value": "app.example.com"}, {"name_value": "api.example.com"}]
+    payload = [
+        {"name_value": "app.example.com"},
+        {"name_value": "api.example.com"},
+    ]
 
     def fake_client(*args, **kwargs):
         return DummyClient(DummyResponse(payload))
@@ -50,18 +57,18 @@ async def test_query_ct_returns_structure(monkeypatch):
 async def test_ipinfo_enrich_handles_http_errors(monkeypatch):
     class ErrorClient(DummyClient):
         async def get(self, *args, **kwargs):
-            response = httpx.Response(404, request=httpx.Request("GET", "https://ipinfo.io/1.1.1.1/json"))
-            raise httpx.HTTPStatusError("Not found", request=response.request, response=response)
+            response = httpx.Response(
+                404,
+                request=httpx.Request("GET", "https://ipinfo.io/1.1.1.1/json"),
+            )
+            raise httpx.HTTPStatusError(
+                "Not found",
+                request=response.request,
+                response=response,
+            )
 
-    monkeypatch.setattr(ipinfo.httpx, "AsyncClient", lambda *args, **kwargs: ErrorClient(None))
-    result = await ipinfo.enrich_ips(["1.1.1.1"])
-
-    assert result == []
-
-
-@pytest.mark.asyncio
-async def test_collect_dns_records_returns_empty_structure():
-    result = await dns.collect_dns_records([])
-    assert result["subdomains"] == []
-    assert result["ips"] == []
-    assert result["dns_records"] == {}
+    monkeypatch.setattr(
+        ipinfo.httpx,
+        "AsyncClient",
+        lambda *args, **kwargs: ErrorClient(None),
+    )

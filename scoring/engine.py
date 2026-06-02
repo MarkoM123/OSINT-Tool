@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import Any
 
 
 def _get_field(f: Any, key: str, default=None):
@@ -8,7 +8,7 @@ def _get_field(f: Any, key: str, default=None):
 	return getattr(f, key, default)
 
 
-def compute_score(findings: List[Any]) -> Dict[str, int]:
+def compute_score(findings: list[Any]) -> dict[str, int]:
 	# Categories and weights
 	weights = {
 		"email_security": 0.25,
