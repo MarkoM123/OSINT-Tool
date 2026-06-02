@@ -154,7 +154,7 @@ def generate_executive_report(
             temperature=0.0,
             max_tokens=700,
         )
-        content = response.choices[0].message.content.strip()
+        content = (response.choices[0].message.content or "").strip()
         if not content:
             logger.error("OpenAI returned an empty executive report response.")
             raise RuntimeError("Executive report generation returned no content.")
