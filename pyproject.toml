@@ -17,7 +17,7 @@ fix = true
 select = ["E", "F", "I", "UP"]
 
 [tool.mypy]
-python_version = "3.12"
+python_version = "3.14"
 ignore_missing_imports = true
 warn_unused_ignores = true
 disallow_untyped_defs = false
@@ -26,6 +26,20 @@ disallow_incomplete_defs = false
 disallow_untyped_decorators = false
 follow_imports = "normal"
 show_error_codes = true
+packages = [
+	"api",
+	"analyzers",
+	"collectors",
+	"core",
+	"database",
+	"findings",
+	"monitoring",
+	"reporting",
+	"scoring",
+	"services",
+	"tasks",
+	"tests",
+]
 
 [tool.pytest.ini_options]
 addopts = "-v"
