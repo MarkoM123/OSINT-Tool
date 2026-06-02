@@ -7,7 +7,7 @@ on:
 
 jobs:
   test-and-validate:
-    name: Lint, Typecheck, Test, Build
+    name: Lint, Typecheck, Test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -50,10 +50,3 @@ jobs:
         with:
           name: pytest-junit
           path: reports/junit.xml
-
-      - name: Optional: start app to validate it boots
-        run: |
-          nohup uvicorn api.main:app --host 0.0.0.0 --port 8000 --lifespan off >uvicorn.log 2>&1 &
-          sleep 2
-          ps aux | grep uvicorn || true
-        continue-on-error: true
