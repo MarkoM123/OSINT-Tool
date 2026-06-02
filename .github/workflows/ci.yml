@@ -27,9 +27,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libcairo2 libcairo2-dev \
-            libpango1.0-0 libpango1.0-dev \
+            libpango-1.0-0 libpango1.0-dev \
             libgdk-pixbuf2.0-0 libgdk-pixbuf2.0-dev \
-            libffi-dev libxml2-dev libxslt1-dev zlib1g-dev \
+            libffi-dev libxml2 libxml2-dev libxslt1-dev zlib1g-dev \
             shared-mime-info
 
       - name: Cache pip
