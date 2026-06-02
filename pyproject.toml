@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=64.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eip"
+version = "0.1.0"
+description = "Exposure Intelligence Platform backend"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+select = ["E", "F", "I", "UP"]
+fix = true
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = true
+disallow_untyped_defs = false
+disallow_untyped_calls = false
+disallow_incomplete_defs = false
+disallow_untyped_decorators = false
+follow_imports = "normal"
+show_error_codes = true
+
+[tool.pytest.ini_options]
+addopts = "-v"
+asyncio_mode = "auto"

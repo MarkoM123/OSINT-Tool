@@ -12,10 +12,11 @@ env = Environment(
 
 
 def render_report(context: dict) -> bytes:
-	template = env.get_template("report.html")
-	html = template.render(**context)
-	if HTML:
-		doc = HTML(string=html)
-		return doc.write_pdf()
-	# Fallback: return HTML bytes
-	return html.encode("utf-8")
+    context.setdefault("executive_summary", "Executive summary unavailable at this time.")
+    template = env.get_template("report.html")
+    html = template.render(**context)
+    if HTML:
+        doc = HTML(string=html)
+        return doc.write_pdf()
+    # Fallback: return HTML bytes
+    return html.encode("utf-8")

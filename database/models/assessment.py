@@ -1,7 +1,7 @@
 from datetime import datetime
 import uuid
 
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text
 from sqlalchemy.dialects.postgresql import UUID
 
 from database.base import Base
@@ -14,6 +14,7 @@ class Assessment(Base):
     company_id = Column(UUID(as_uuid=True), ForeignKey("companies.id"), nullable=False)
     status = Column(String(32), default="pending")  # pending|running|completed|failed
     score = Column(Integer, nullable=True)
+    executive_summary = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     started_at = Column(DateTime, nullable=True)
     finished_at = Column(DateTime, nullable=True)

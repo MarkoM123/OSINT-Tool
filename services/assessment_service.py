@@ -1,4 +1,4 @@
-from typing import List
+from typing import Any, List
 import uuid
 import asyncio
 import logging
@@ -17,10 +17,49 @@ from collectors import ct_logs, dns, ipinfo, whois
 from analyzers import email as email_analyzer, tls as tls_analyzer, technologies as tech_analyzer, credentials as cred_analyzer
 from findings.engine import normalize_findings
 from scoring.engine import compute_score
+from reporting import generate_executive_report
 from reporting.pdf import render_report
 from core.config import get_settings
 
 logger = logging.getLogger("eip.assessment")
+
+SEVERITY_PRIORITY: dict[str, int] = {
+    "critical": 4,
+    "high": 3,
+    "medium": 2,
+    "low": 1,
+}
+
+
+def _safe_text(value: Any) -> str:
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _sort_key_for_finding(finding: dict[str, Any]) -> tuple[int, float]:
+    severity = str(finding.get("severity", "medium")).lower()
+    priority = SEVERITY_PRIORITY.get(severity, 2)
+    confidence = float(finding.get("confidence", 0.0) or 0.0)
+    return priority, confidence
+
+
+def _prepare_executive_findings(findings: list[dict[str, Any]], limit: int = 8) -> list[dict[str, Any]]:
+    sorted_findings = sorted(findings, key=_sort_key_for_finding, reverse=True)
+    compact: list[dict[str, Any]] = []
+    for finding in sorted_findings[:limit]:
+        compact.append(
+            {
+                "title": _safe_text(finding.get("title")),
+                "description": _safe_text(finding.get("description")),
+                "evidence": _safe_text(finding.get("evidence")),
+                "severity": _safe_text(finding.get("severity")),
+                "category": _safe_text(finding.get("category")),
+                "confidence": float(finding.get("confidence", 0.0) or 0.0),
+                "recommendation": _safe_text(finding.get("recommendation")),
+            }
+        )
+    return compact
 
 
 class AssessmentService:
@@ -103,6 +142,39 @@ class AssessmentService:
             )
             self.db.add(score)
             assessment.score = score.overall
+            assessment.executive_summary = "Unavailable"
+
+            category_scores = {
+                "email_security": score_result["email_score"],
+                "attack_surface": score_result["attack_surface_score"],
+                "credentials": score_result["credentials_score"],
+                "technology": score_result["technology_score"],
+                "reputation": score_result["reputation_score"],
+            }
+            top_findings = _prepare_executive_findings(findings, limit=8)
+
+            try:
+                logger.info("Generating executive summary for assessment id=%s", assessment_id)
+                executive_summary = await asyncio.wait_for(
+                    asyncio.to_thread(
+                        generate_executive_report,
+                        domain,
+                        score_result["overall"],
+                        category_scores,
+                        top_findings,
+                        "executive",
+                    ),
+                    timeout=30.0,
+                )
+                assessment.executive_summary = executive_summary
+                logger.info("Executive summary generated for assessment id=%s", assessment_id)
+            except Exception as exc:
+                logger.warning(
+                    "Executive summary generation failed for assessment id=%s: %s",
+                    assessment_id,
+                    exc,
+                )
+                assessment.executive_summary = "Unavailable"
 
             # Generate PDF report
             # Build report context
@@ -206,6 +278,7 @@ class AssessmentService:
             "company_id": str(assessment.company_id),
             "status": assessment.status,
             "score": score.overall if score else None,
+            "executive_summary": assessment.executive_summary,
             "category_scores": {
                 "email_security": score.email_score if score else None,
                 "attack_surface": score.attack_surface_score if score else None,

@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  test-and-validate:
+    name: Lint, Typecheck, Test, Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install ruff mypy pytest pytest-asyncio
+
+      - name: Lint with ruff
+        run: |
+          ruff check .
+
+      - name: Type check with mypy
+        run: |
+          mypy . --ignore-missing-imports
+
+      - name: Run tests
+        run: |
+          mkdir -p reports
+          pytest --junitxml=reports/junit.xml -q
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-junit
+          path: reports/junit.xml
+
+      - name: Optional: start app to validate it boots
+        run: |
+          nohup uvicorn api.main:app --host 0.0.0.0 --port 8000 --lifespan off >uvicorn.log 2>&1 &
+          sleep 2
+          ps aux | grep uvicorn || true
+        continue-on-error: true
