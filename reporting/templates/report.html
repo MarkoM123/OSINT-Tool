@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Exposure Intelligence Report - {{ domain }}</title>
+    <style>
+      body { font-family: Arial, sans-serif; margin: 24px; }
+      h1 { color: #0b3d91 }
+      .summary { margin-bottom: 16px; }
+      .section { margin-top: 20px; }
+      .finding { border-bottom: 1px solid #eee; padding: 8px 0; }
+    </style>
+  </head>
+  <body>
+    <h1>Exposure Intelligence Report</h1>
+    <div class="summary">
+      <strong>Domain:</strong> {{ domain }}<br/>
+      <strong>Company:</strong> {{ company }}<br/>
+      <strong>Assessment ID:</strong> {{ assessment_id }}<br/>
+      <strong>Overall score:</strong> {{ overall_score }}
+    </div>
+
+    <div class="section">
+      <h2>Executive summary</h2>
+      <p>{{ executive_summary }}</p>
+    </div>
+
+    <div class="section">
+      <h2>Top findings</h2>
+      {% for f in top_findings %}
+      <div class="finding">
+        <strong>{{ f.title }}</strong> — <em>{{ f.severity }}</em>
+        <p>{{ f.description }}</p>
+        <p><strong>Recommendation:</strong> {{ f.recommendation }}</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="section">
+      <h2>Category breakdown</h2>
+      <ul>
+        {% for k, v in category_breakdown.items() %}
+        <li><strong>{{ k }}:</strong> {{ v }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+
+  </body>
+</html>
