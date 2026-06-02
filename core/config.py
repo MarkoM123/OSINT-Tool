@@ -1,22 +1,26 @@
-from pydantic import BaseSettings, Field
+import os
 
 
-class Settings(BaseSettings):
-    project_name: str = "Exposure Intelligence Platform"
-    environment: str = "development"
+class Settings:
+    project_name: str
+    environment: str
 
-    database_url: str = Field(
-        "postgresql+asyncpg://eip_user:eip_password@localhost:5432/eip",
-        env="DATABASE_URL",
-    )
+    database_url: str
+    redis_url: str
 
-    redis_url: str = Field("redis://localhost:6379/0", env="REDIS_URL")
+    openai_api_key: str | None
+    ipinfo_token: str | None
 
-    openai_api_key: str | None = Field(None, env="OPENAI_API_KEY")
-    ipinfo_token: str | None = Field(None, env="IPINFO_TOKEN")
-
-    class Config:
-        env_file = ".env"
+    def __init__(self) -> None:
+        self.project_name = os.getenv("PROJECT_NAME", "Exposure Intelligence Platform")
+        self.environment = os.getenv("ENVIRONMENT", "development")
+        self.database_url = os.getenv(
+            "DATABASE_URL",
+            "postgresql+asyncpg://eip_user:eip_password@localhost:5432/eip",
+        )
+        self.redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.ipinfo_token = os.getenv("IPINFO_TOKEN")
 
 
 _settings_instance: Settings | None = None

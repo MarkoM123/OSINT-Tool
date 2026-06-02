@@ -4,7 +4,7 @@ import json
 import logging
 from typing import Any
 
-import openai
+from openai import OpenAI
 
 from core.config import get_settings
 
@@ -85,7 +85,7 @@ def _build_prompt(
         "top_findings": _build_findings_summary(findings, limit=5),
     }
 
-    prompt_parts = [
+    prompt_parts: list[str] = [
         "You are an experienced cybersecurity consultant preparing an "
         "executive report for C-suite stakeholders.",
         "Use only the information provided below and keep the response "
@@ -136,10 +136,10 @@ def generate_executive_report(
         logger.warning("Overall score %s is out of expected range 0-100.", score)
 
     prompt = _build_prompt(domain, score, category_scores, findings, tone)
-    openai.api_key = settings.openai_api_key
+    client = OpenAI(api_key=settings.openai_api_key)
 
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=[
                 {
